@@ -1,6 +1,6 @@
 # Mindweb http server
 
-Это http framework для rest части похожий на [https://github.com/twitter/finatra](finatra), но кроме rest имеет sitemap из которого собирается полноценный сайт с автоматической ajax-навигацией и поддержкой roundtrip'ов. Работает на [https://github.com/netty/netty](netty), часть кода взята из [https://github.com/twitter/finagle](finagle).
+Это http framework для rest части похожий на [https://github.com/twitter/finatra](finatra), но кроме rest имеет sitemap из которого собирается полноценный сайт с автоматической ajax-навигацией и поддержкой roundtrip'ов. Работает на [https://github.com/netty/netty](netty), часть кода взята из [https://github.com/twitter/finagle](finagle). Для парсинга и сериализации json используется [https://github.com/FasterXML/jackson](Jckson).
 Но продукт существенно легче, чем и finatra и finagle. Есть вариант без использования nio (без netty), для embedded платформ. Но пока не выложен в открытый доступ.
 
 Framework предствален здесь в простом варианте, когда сессия не храниться в отдельном микросервисе. Highload вариант есть, полностью основан на том, что в открытом доступе на этой страничке, но будет предоставляться исключительно на коммерческой основе [kuprin.alexander@gmail.com](по запросу)
