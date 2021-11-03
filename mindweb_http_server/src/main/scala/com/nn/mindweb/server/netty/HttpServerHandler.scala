@@ -2,7 +2,6 @@ package com.nn.mindweb.server.netty
 
 import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
-
 import com.nn.mindweb.server.ServerContext._
 import com.nn.mindweb.server.messages.Response
 import com.nn.mindweb.server.{MindwebServer, Service}
@@ -16,6 +15,7 @@ import io.netty.util.{CharsetUtil, ReferenceCountUtil}
 import net.aklabs.helpers.NonBlockingData
 import org.pmw.tinylog.Logger
 
+import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 
@@ -72,6 +72,7 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
   private final val factory = new HttpPostDataFactory(false)
   private var httpRequest: Option[RemoteNettyHttpRequest] = None
   private var httpDecoder: Option[HttpPostRequestDecoder] = None
+  private val attrsToRelease: mutable.Map[String, Attribute] = mutable.Map.empty
   private var serviceStarted: Boolean = false
   private var postLength: Long = 0
 
@@ -82,10 +83,12 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
       case Failure(exception) =>
         httpDecoder.foreach(_.destroy())
         httpDecoder = None
+        attrsToRelease.clear()
         BadResponses.sendResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, exception.getMessage)
       case Success(response) =>
         httpDecoder.foreach(_.destroy())
         httpDecoder = None
+        attrsToRelease.clear()
 
         response.headers().add("Server", "MindWeb Edge/2021-02-02")
         if (!response.isChunked()) {
@@ -139,7 +142,7 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
             //Logger.debug("Try offer chunk: " + httpObj)
             decoder.offer(chunk)
             //Logger.debug("AFTER DECODE" + httpObj)
-            readMultipartChunk(ctx, httpRequest.get)
+            readMultipartChunk(ctx, httpRequest.get, attrsToRelease)
             /*
             if (decoder.isMultipart) {
               decoder.offer(chunk)
@@ -166,9 +169,15 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
             //io.netty.util.internal.ReferenceCountUpdater
 
             if (chunk.isInstanceOf[LastHttpContent]) {
+              //Logger.debug("attrsToRelease: " + attrsToRelease.values.toSet)
+              attrsToRelease.values.foreach(a => try {
+                a.release()
+              } catch {
+                case e: Throwable => e.printStackTrace()
+              })
               if (!serviceStarted)
                 doService(ctx, httpRequest.get)
-              Logger.debug("chunk reading is done")
+              //Logger.debug("chunk reading is done")
               httpRequest.foreach(_.isComplete = true)
               httpDecoder = None
             }
@@ -178,7 +187,9 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
             //e.printStackTrace()
             //игнорируем, могли уже закрыть канал, вернув ответ, до чтения всех данных.
         }
-        case _ => //Logger.debug("discard"); chunk.release()
+        case _ =>
+          Logger.debug("discard")
+          //chunk.release()
       }
       case x =>
         //Logger.debug("Bad http chunk: " + x)
@@ -186,13 +197,15 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
     }
   }
 
-  def readMultipartChunk(ctx: ChannelHandlerContext, request: RemoteNettyHttpRequest): Unit = {
+  def readMultipartChunk(ctx: ChannelHandlerContext, request: RemoteNettyHttpRequest,
+                         attrsToRelease: mutable.Map[String, Attribute]): Unit = {
     //Logger.debug("readChunk")
     val decoder = httpDecoder.get
     do {
+      //Logger.debug("before next partial")
       val nextPartial = if (try {
         decoder.hasNext
-      } catch {case _: EndOfDataDecoderException => false}) {Logger.debug("next"); decoder.next()}
+      } catch {case _: EndOfDataDecoderException => false}) {decoder.next()}
       else decoder.currentPartialHttpData()
 
       //Logger.debug("nextPartial: " + nextPartial)
@@ -203,7 +216,16 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
             request.addPostParam(attr.getName, attr.getValue)
           }
           //Logger.debug("the attribute: " + attr)
-          attr.release()
+          //Logger.debug("post param: " + request.getPostParams.get(attr.getName))
+
+          attrsToRelease += attr.getName -> attr
+          /*
+          try {
+            attr.release()
+          } catch {
+            case e: Throwable => e.printStackTrace()
+          }
+           */
         case fileUpload: MemoryTransferFileUpload =>
           if (MindwebServer.disableMultipartFiles)
             BadResponses.sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, "File upload is disabled")
@@ -223,9 +245,11 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
           } // finally if (fileUpload.isCompleted) fileUpload.release
         case x => Logger.debug("Unknown post part: " + x)
       }
+      //Logger.debug("End of in-cycle operation")
     } while (try {
       decoder.hasNext
     } catch {case _: EndOfDataDecoderException => false})
+
 /*
     while (decoder.hasNext) {
       decoder.next match {
