@@ -1,6 +1,6 @@
 # Mindweb http server
 
-Это http framework для rest части похожий на [https://github.com/twitter/finatra](finatra), но кроме rest имеет sitemap из которого собирается полноценный сайт с автоматической ajax-навигацией и поддержкой roundtrip'ов. Работает на [https://github.com/netty/netty](netty), часть кода взята из [https://github.com/twitter/finagle](finagle). Для парсинга и сериализации json используется [https://github.com/FasterXML/jackson](Jckson), а для merge и patch JSON'а [json-patch](https://github.com/java-json-tools/json-patch). Почему сейчас они в проекте, а не подтянуты через dependency в sbt, на данный момент мне не ясно :) Возможно, где-то что-то подправлялось.
+Это http framework для rest части похожий на [finatra](https://github.com/twitter/finatra), но кроме rest имеет sitemap из которого собирается полноценный сайт с автоматической ajax-навигацией и поддержкой roundtrip'ов. Работает на [netty](https://github.com/netty/netty), часть кода взята из [finagle](https://github.com/twitter/finagle). Для парсинга и сериализации json используется [Jckson](https://github.com/FasterXML/jackson), а для diff, merge и patch JSON'а [json-patch](https://github.com/java-json-tools/json-patch). Почему сейчас они в проекте, а не подтянуты через dependency в sbt, на данный момент мне не ясно :) Возможно, где-то что-то подправлялось.
 
 Продукт существенно легче, чем и finatra и finagle. Есть вариант без использования nio (без netty), для embedded платформ. Но пока не выложен в открытый доступ.
 
