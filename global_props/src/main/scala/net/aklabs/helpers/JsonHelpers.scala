@@ -3,26 +3,84 @@ package net.aklabs.helpers
 import java.io.{File, InputStream}
 import java.lang.reflect.{ParameterizedType, Type}
 import java.util
-
 import collection.JavaConverters._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.fasterxml.jackson.databind.node.{IntNode, _}
+import com.fasterxml.jackson.databind.node._
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.collect.{MapDifference, Maps}
-import net.aklabs.helpers.JsonHelpers.JInt
 import org.pmw.tinylog.Logger
 
 import scala.language.implicitConversions
 
+
+
+class RichJObj(val obj: ObjectNode) {
+  def children: Seq[JsonHelpers.JField] = {
+    obj.fields().asScala.toSeq.map(e => JsonHelpers.JField(e.getKey, e.getValue))
+  }
+  def fields: Seq[JsonHelpers.JField] = children
+  def +(jf: JsonHelpers.JField): JsonNode = {
+    JsonHelpers.JObject(
+      obj.fields().asScala.toSeq.map(e => e.getKey -> e.getValue)
+    ).set(jf.name, jf.value)
+  }
+  def +=(jf: JsonHelpers.JField): JsonNode = {
+    obj.set(jf.name, jf.value)
+  }
+  def ++(sjf: Seq[JsonHelpers.JField]) : JsonNode = {
+    val copy = JsonHelpers.JObject(
+      obj.fields().asScala.toSeq.map(e => e.getKey -> e.getValue)
+    )
+    sjf.foreach(jf => copy.set(jf.name, jf.value))
+    copy
+  }
+  def ++=(sjf: Seq[JsonHelpers.JField]) : JsonNode = {
+    sjf.foreach(jf => obj.set(jf.name, jf.value))
+    obj
+  }
+
+  def diff(otherObj: JsonHelpers.JObject): MapDifference[String, AnyRef] = {
+    val leftMap = JsonHelpers.Jckson.clearMap(
+      JsonHelpers.Jckson.mapper.convertValue(obj, classOf[java.util.HashMap[String, Object]])
+    )
+    val rightMap = JsonHelpers.Jckson.clearMap(
+      JsonHelpers.Jckson.mapper.convertValue(otherObj, classOf[java.util.HashMap[String, Object]])
+    )
+
+    Maps.difference(leftMap, rightMap)
+  }
+  def jsonpDiff(otherObj: JsonHelpers.JObject,
+                arrayKeys: Seq[String] = Nil): MapDifference[String, Object] = {
+    Logger.debug("jsonpDiff")
+    val leftMap = JsonHelpers.Jckson.clearFlatMap(
+      JsonHelpers.Jckson.mapper.convertValue(obj, classOf[java.util.HashMap[String, Object]]),
+      arrayKeys = arrayKeys
+    )
+    val rightMap = JsonHelpers.Jckson.clearFlatMap(
+      JsonHelpers.Jckson.mapper.convertValue(otherObj, classOf[java.util.HashMap[String, Object]]),
+      arrayKeys = arrayKeys
+    )
+
+    Logger.debug("jsonpDiff")
+    Logger.debug("left:")
+    Logger.debug(leftMap)
+    Logger.debug("right:")
+    Logger.debug(rightMap)
+
+    Maps.difference(leftMap, rightMap)
+  }
+  def jsonpDiffArrays(obj: JsonHelpers.JObject): MapDifference[String, Object] =
+    jsonpDiff(obj, Seq("jvlink_id" /*, "jvsort_id"*/))
+}
 class RichJNode(val jv: JsonNode) {
   def \(name: String): JsonNode = {
     if (jv == null) null
     else jv.get(name) match {
-      case i: IntNode => JInt(i.intValue())
-      case i: LongNode => JInt(i.longValue())
-      case i: ShortNode => JInt(i.shortValue())
-      case i: DecimalNode => JInt(i.bigIntegerValue())
+      case i: IntNode => JsonNodeFactory.instance.numberNode(i.bigIntegerValue()).asInstanceOf[BigIntegerNode]
+      case i: LongNode => JsonNodeFactory.instance.numberNode(i.bigIntegerValue()).asInstanceOf[BigIntegerNode]
+      case i: ShortNode => JsonNodeFactory.instance.numberNode(i.bigIntegerValue()).asInstanceOf[BigIntegerNode]
+      case i: DecimalNode => JsonNodeFactory.instance.numberNode(i.bigIntegerValue()).asInstanceOf[BigIntegerNode]
       case x => x
     }
   }
@@ -32,57 +90,38 @@ class RichJNode(val jv: JsonNode) {
     case json     => Some(json)
   }
   def children: Seq[JsonHelpers.JField] = jv match {
-    case obj: ObjectNode => obj.fields().asScala.toSeq.map(e => e.getKey -> e.getValue)
+    case obj: ObjectNode => obj.fields().asScala.toSeq.map(e => JsonHelpers.JField(e.getKey, e.getValue))
     case _ => Nil
   }
   def fields: Seq[JsonHelpers.JField] = children
-  def +(jf: JsonHelpers.JField) : JsonNode = jv match {
-    case obj: ObjectNode => JsonHelpers.JObject(
-      obj.fields().asScala.toSeq.map(e => e.getKey -> e.getValue)
-    ).set(jf.name, jf.value)
-    case _ => jv
+
+  def +(jf: JsonHelpers.JField): JsonNode = jv match {
+    case thisObj: ObjectNode => new RichJObj(thisObj) + jf
+    case x => x
   }
-  def +=(jf: JsonHelpers.JField) : JsonNode = jv match {
-    case obj: ObjectNode => obj.set(jf.name, jf.value)
-    case _ => jv
+  def +=(jf: JsonHelpers.JField): JsonNode = jv match {
+    case thisObj: ObjectNode => new RichJObj(thisObj) += jf
+    case x => x
+  }
+  def ++(sjf: Seq[JsonHelpers.JField]) : JsonNode = jv match {
+    case thisObj: ObjectNode => new RichJObj(thisObj) ++ sjf
+    case x => x
+  }
+  def ++=(sjf: Seq[JsonHelpers.JField]) : JsonNode = jv match {
+    case thisObj: ObjectNode => new RichJObj(thisObj) ++= sjf
+    case x => x
   }
 
-  def diff(obj: JsonHelpers.JObject): MapDifference[String, AnyRef] = jv match {
-    case thisObj: ObjectNode =>
-      val leftMap = JsonHelpers.Jckson.clearMap(
-        JsonHelpers.Jckson.mapper.convertValue(thisObj, classOf[java.util.HashMap[String, Object]])
-      )
-      val rightMap = JsonHelpers.Jckson.clearMap(
-        JsonHelpers.Jckson.mapper.convertValue(obj, classOf[java.util.HashMap[String, Object]])
-      )
-
-      Maps.difference(leftMap, rightMap)
-
+  def diff(otherObj: JsonHelpers.JObject): MapDifference[String, AnyRef] = jv match {
+    case thisObj: ObjectNode => new RichJObj(thisObj).diff(otherObj)
     case _ => throw new Exception("Can diff only objects")
   }
-  def jsonpDiff(obj: JsonHelpers.JObject,
+  def jsonpDiff(otherObj: JsonHelpers.JObject,
                 arrayKeys: Seq[String] = Nil): MapDifference[String, Object] = jv match {
-    case thisObj: ObjectNode =>
-      Logger.debug("jsonpDiff")
-      val leftMap = JsonHelpers.Jckson.clearFlatMap(
-        JsonHelpers.Jckson.mapper.convertValue(thisObj, classOf[java.util.HashMap[String, Object]]),
-        arrayKeys = arrayKeys
-      )
-      val rightMap = JsonHelpers.Jckson.clearFlatMap(
-        JsonHelpers.Jckson.mapper.convertValue(obj, classOf[java.util.HashMap[String, Object]]),
-        arrayKeys = arrayKeys
-      )
-
-      Logger.debug("jsonpDiff")
-      Logger.debug("left:")
-      Logger.debug(leftMap)
-      Logger.debug("right:")
-      Logger.debug(rightMap)
-
-      Maps.difference(leftMap, rightMap)
+    case thisObj: ObjectNode => new RichJObj(thisObj).jsonpDiff(otherObj, arrayKeys)
     case _ => throw new Exception("Can diff only objects")
   }
-  def jsonpDiffArrays(obj: JsonHelpers.JObject) =
+  def jsonpDiffArrays(obj: JsonHelpers.JObject): MapDifference[String, Object] =
     jsonpDiff(obj, Seq("jvlink_id" /*, "jvsort_id"*/))
 }
 class RichJArray(val array: ArrayNode) {
@@ -99,17 +138,22 @@ object JsonHelpers {
   type JObject = ObjectNode
   type JArray = ArrayNode
 
-  implicit def field2tuple(field: JField): (String, JValue) = field.name -> field.value
-  implicit def tuple2field(fv: (String, JValue)): JField = JField(fv._1, fv._2)
-  implicit def fieldseq2tupleseq(fields: Seq[JField]): Seq[(String, JValue)] = fields.map(field2tuple)
-  implicit def tupleseq2fieldseq(fv: Seq[(String, JValue)]): Seq[JField] = fv.map(tuple2field)
-  implicit def node2rich(jv: JValue): RichJNode = new RichJNode(jv)
-  implicit def rich2node(rich: RichJNode): JValue = rich.jv
-  implicit def array2rich(array: JArray): RichJArray = new RichJArray(array)
-  implicit def rich2array(rich: RichJArray): JArray = rich.array
-  implicit def fieldseq2object(fields: Seq[JField]): JObject = JObject(fields)
-
-  def any2JValue(v: Any, error_v: String = "v"): JValue = v match {
+  implicit def s2JValue(s: String): JValue = JString(s)
+  implicit def i2JValue(i: Int): JValue = JInt(i)
+  implicit def bi2JValue(i: BigInt): JValue = JInt(i)
+  implicit def l2JValue(i: Long): JValue = JInt(i)
+  implicit def f2JValue(d: Float): JValue = JDouble(d)
+  implicit def d2JValue(d: Double): JValue = JDouble(d)
+  implicit def bd2JValue(i: BigDecimal): JValue = JDouble(i)
+  implicit def b2JValue(i: Boolean): JValue = JBool(i)
+  implicit def b2JValue[A](s: Seq[A])(implicit c: A => JValue): JArray = JArray(s.map(c))
+  implicit def a2JValue[A](s: Array[A])(implicit c: A => JValue): JArray = JArray(s.map(c))
+  implicit def m2JValue[A](m: Map[String, A])(implicit c: A => JValue): JObject =
+    JObject(m.map(e => e._1 -> c(e._2)))
+  implicit def ts2JValue[A](m: Seq[(String, A)])(implicit c: A => JValue): JObject =
+    JObject(m.map(e => e._1 -> c(e._2)))
+  implicit def any2JValue(v: Any): JValue = any2JValue(v, error_v = "v")
+  def any2JValue(v: Any, error_v: String): JValue = v match {
     case s: String => JString(s)
     case i: Int => JInt(i)
     case i: BigInt => JInt(i)
@@ -126,18 +170,142 @@ object JsonHelpers {
     case x => throw new Exception("Invalid %s %s".format(error_v, x.getClass.toString))
   }
 
-  case class JField(name: String, value: JValue)
+  implicit def anyseq2jvseq[JV](fv: Seq[JV])(implicit fn: JV => JValue): Seq[JValue] = fv.map(fn)
+
+  implicit def field2tuple(field: JField): (String, JValue) = field.name -> field.value
+  implicit def tuple2field[JV](fv: (String, JV))(implicit fn: JV => JValue): JField = JField(fv._1, fv._2)
+  //implicit def fieldseq2tupleseq(fields: Seq[JField]): Seq[(String, JValue)] = fields.map(field2tuple)
+  implicit def tupleseq2fieldseq[JV](fv: Seq[(String, JV)])(implicit fn: JV => JValue): Seq[JField] = fv.map(tuple2field)
+  //implicit def anytupleseq2field(fv: Seq[(String, Any)]): Seq[JField] = fv.map(anytuple2field)
+  implicit def node2rich(jv: JValue): RichJNode = new RichJNode(jv)
+  implicit def obj2rich(o: JObject): RichJObj = new RichJObj(o)
+  implicit def rich2node(rich: RichJNode): JValue = rich.jv
+  implicit def array2rich(array: JArray): RichJArray = new RichJArray(array)
+  implicit def rich2array(rich: RichJArray): JArray = rich.array
+  implicit def fieldseq2object[JF](fields: Seq[JF])(implicit fn: JF => (String, JValue)): JObject =
+    JObject(fields.map(fn))
+  implicit def fieldmap2object[JV](fields: Map[String, JV])(implicit fn: JV => JValue): JObject =
+    JObject(fields.map(kv => kv._1 -> fn(kv._2)))
+
+  //How to use
+  /*
+  val x: Seq[(String, JValue)] = Seq(JField("x", 0), JField("y", "hello"))
+  val o: JObject = Map("x" -> 0, "y" -> "hello")
+  val o2: JObject = Seq("x" -> 0, "y" -> "hello")
+  val seq: Seq[JField] = Seq("x" -> 0, "y" -> "hello")
+  val arr: JArray = JArray(Seq("x" -> 0, "y" -> "hello"))
+   */
+
+  case class JField(name: String, value: JValue) {
+    def toTuple: (String, JValue) = name -> value
+  }
+
+  implicit def field2option(field: JField): Option[JField] = Some(field)
+  implicit def tuple2option[JV](fv: (String, JV))(implicit fn: JV => JValue): Option[JField] =
+    Some(JField(fv._1, fv._2))
+  implicit def optiontuple2field[JV](fv: Option[(String, JV)])(implicit fn: JV => JValue): Option[JField] =
+    fv.map(fv => JField(fv._1, fv._2))
 
   object JObject {
-    def apply(field: (String, JValue)): JObject = apply(Seq(field))
-    def apply(fields: Seq[(String, JValue)]): JObject = {
-      JsonNodeFactory.instance.objectNode().setAll(fields.toMap.asJava)
+    def apply(name: String, value: JValue): JObject = {
+      val n = JsonNodeFactory.instance.objectNode()
+      n.set(name, value)
+      n
+    }
+    def apply(): JObject = JsonNodeFactory.instance.objectNode()
+    def apply(fields: Seq[JField]): JObject = {
+      val n = JsonNodeFactory.instance.objectNode()
+      fields.foreach(f => n.set(f._1, f._2): ObjectNode)
+      n
+      //JsonNodeFactory.instance.objectNode().setAll(fields.map(jf => jf.name -> jf.value).toMap.asJava)
+    }
+    def apply(fields: JField*)(implicit dummy: DummyImplicit): JObject = {
+      val n = JsonNodeFactory.instance.objectNode()
+      fields.foreach(f => n.set(f._1, f._2): ObjectNode)
+      n
+      //JsonNodeFactory.instance.objectNode().setAll(fields.map(f => f.name -> f.value).toMap.asJava)
     }
     def apply(fields: Map[String, JValue]): JObject = {
-      JsonNodeFactory.instance.objectNode().setAll(fields.asJava)
+      val n = JsonNodeFactory.instance.objectNode()
+      fields.foreach(f => n.set(f._1, f._2): ObjectNode)
+      n
+      //JsonNodeFactory.instance.objectNode().setAll(fields.asJava)
+    }
+    def apply(fields: Option[JField]*)(implicit dummy: DummyImplicit, dummy2: DummyImplicit): JObject = {
+      val n = JsonNodeFactory.instance.objectNode()
+      fields.flatten.foreach(f => n.set(f._1, f._2): ObjectNode)
+      n
+      //JsonNodeFactory.instance.objectNode().setAll(fields.flatten.map(f => f.name -> f.value).toMap.asJava)
     }
     def unapply(fields: Seq[(String, JValue)]): Option[Seq[(String, JValue)]] = Some(fields)
   }
+
+/*
+  val fields = Seq("x" -> 0, "y" -> "hello")
+  val fields2: Seq[JField] = fields
+  val o1 = JObject(fields)
+  val o2 = JObject(Seq("x" -> 0, "y" -> "hello"))
+  val o3 = JObject("x" -> 0)
+  val o4 = JObject("x" -> 0, Some("y" -> "123"), None)
+  val o5 = JObject(JField("x", 0), "x2" -> 2, Some("y" -> "123"), None, Some(JField("y2", "12345")))
+ */
+
+/*
+  val optional: Option[Boolean] = Some(true)
+  val o: JObject = JObject(
+    "f1" -> "f1",
+    "f2" -> 0,
+    "arr" -> Seq(1, 2, 3, 4, Seq(1, 2, 3), JObject(
+      "inner", 0.6
+    )),
+    optional.map("opt" -> _),
+    None
+  )
+
+  val f2: BigInt = o \ "f2" match {
+    case JInt(i) => i.toInt
+  }
+  val flattenedArray: Iterable[Double] = (o \ "arr" match {
+    case JArray(arr) => arr.collect {
+      case x if (x \ "inner" match {
+        case JDouble(_) => true;
+        case _ => false
+      }) => Seq((x \ "inner").doubleValue())
+      case JInt(i) => Seq(i.doubleValue())
+      case JArray(innerArr) => innerArr.map(_.doubleValue())
+    }
+  }).flatten
+ */
+
+  /*
+  val optional: Option[Boolean] = Some(true)
+  val n: JObject = JsonNodeFactory.instance.objectNode()
+  Seq(
+    Some(JField("f1", JsonNodeFactory.instance.textNode("f1"))),
+    Some(JField("f2", JInt(0))),
+    Some(JField("arr", JArray(Seq(JInt(1), JInt(2), JInt(3), JInt(4), JArray(Seq(JInt(1), JInt(2), JInt(3))),
+      {
+        val n = JsonNodeFactory.instance.objectNode()
+        n.set("inner", JsonNodeFactory.instance.numberNode(0.6).asInstanceOf[JDouble])
+      }
+    )))),
+    optional.map(opt => JField("opt", JsonNodeFactory.instance.booleanNode(opt))),
+    None
+  ).flatten.foreach(f => n.set(f._1, f._2))
+  n
+   */
+
+  /*
+  JsonNodeFactory.instance.objectNode().setAll(Seq(
+    JField("f1", JString("f1")),
+    JField("f2", JInt(0)),
+    JField("f2", JInt(0)),
+  ).map(f => f.name -> f.value).toMap.asJava)
+   */
+
+
+
+
   object JNull {
     def apply(): JNull = {
       JsonNodeFactory.instance.nullNode()
@@ -240,7 +408,7 @@ object JsonHelpers {
           _l.add(clearEl(el))
         }
         _l
-      case l: List[Object] => l.map(clearEl(_)).asJava
+      case l: List[Object] => l.map(clearEl).asJava
       case x => x
     }
 
