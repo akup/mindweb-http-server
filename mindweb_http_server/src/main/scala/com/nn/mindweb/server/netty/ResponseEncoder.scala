@@ -1,6 +1,5 @@
 package com.nn.regbox.server.netty
 
-import com.nn.mindweb.server.messages.Response
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder

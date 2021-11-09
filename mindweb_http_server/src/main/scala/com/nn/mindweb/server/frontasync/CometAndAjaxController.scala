@@ -1,11 +1,11 @@
-package com.nn.mindweb.server.async
+package com.nn.mindweb.server
+package frontasync
 
 import akka.actor.ActorRef
-import com.nn.http.{CometContext, CometListen, CometListener, CometUpdate, R, RenderVersion}
-import com.nn.mindweb.server.dataadapter.AngularRequestServerStructure
-import com.nn.mindweb.server.{Controller, ResponseBuilder, SessionMaster}
+import dataadapter.AngularRequestServerStructure
 import org.pmw.tinylog.Logger
 import net.aklabs.helpers.TimeHelpers._
+import net.aklabs.http.{CometContext, CometListen, CometListener, CometUpdate, R, RenderVersion}
 
 import scala.concurrent.Promise
 import scala.language.postfixOps
@@ -36,6 +36,7 @@ class CometAndAjaxController extends Controller {
       })(CometContext.executionContext)
       val pr = Promise[ResponseBuilder]()
 
+      Logger.debug("Start listen for %s".format(req.routeParams("page_id")))
       val l = new CometListener() {
         def cometOut(json: String): Unit = {
           Logger.debug("Comet out")
@@ -57,7 +58,7 @@ class CometAndAjaxController extends Controller {
       Logger.debug("Got ajax AngularRequestServerStructure: " + AngularRequestServerStructure.get)
       //val renderVersion = req.routeParams("rendv_id")
       if (req.params.get("heartbeat").isDefined) {
-        R.session.foreach(_.updateFuncByOwner(renderVersion, System.currentTimeMillis()))
+        R.session.foreach(_.updateFuncAndCometByOwner(renderVersion))
       } else {
         val runParamsResult: Option[Seq[Any]] = R.session.map(_.runParams(req))
         Logger.debug("runParamsResult: " + runParamsResult)

@@ -1,9 +1,9 @@
-package com.nn.mindweb.server.messages
+package com.nn.mindweb.server
+package messages
 
 import scala.collection.mutable
 import java.util.Date
 
-import com.nn.mindweb.server.Request
 import org.pmw.tinylog.Logger
 
 import scala.collection.JavaConverters._
@@ -36,7 +36,7 @@ class CookieMap(message: CookieMessage)
     }
   }
 
-  protected def rewriteCookieHeaders() {
+  protected def rewriteCookieHeaders(): Unit = {
     // Clear all cookies - there may be more than one with this name.
     message.headers().remove(cookieHeaderName)
 

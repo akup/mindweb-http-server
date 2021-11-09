@@ -1,24 +1,22 @@
 package com.nn.mindweb.server
 
+import com.nn.mindweb.server.MindwebServer.getServerProperty
+import com.nn.mindweb.server.ServerContext._
+import io.netty.handler.codec.http.{HttpHeaderNames, HttpResponseStatus}
+import net.aklabs.helpers.Helpers
+import org.apache.commons.io.FileUtils
+import org.pmw.tinylog.Logger
+
 import java.io.{File, RandomAccessFile}
 import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
-
-import com.nn.http.HttpRequest
-import com.nn.mindweb.server.messages.Response
-import com.nn.mindweb.server.netty.RemoteNettyHttpRequest
-import MindwebServer.getServerProperty
-import ServerContext._
-import io.netty.handler.codec.http.{HttpHeaderNames, HttpResponseStatus}
 import javax.activation.MimetypesFileTypeMap
-import net.aklabs.helpers.Helpers
-import org.apache.commons.io.FileUtils
-import org.pmw.tinylog.Logger
-
 import scala.concurrent.Future
 
+import netty._
+import messages._
 
 object FileService {
   private final val noDownload = Seq("text/html", "application/javascript", "text/css")
@@ -47,9 +45,9 @@ object FileService {
   lazy val lastModDate: String = formatter.format(new Date())
   lazy val expire: Date = {
     val dt = new Date()
-    dt.setYear(dt.getYear()+1)
+    dt.setYear(dt.getYear+1)
     dt
-    }
+  }
   lazy val expireDate: String = formatter.format(expire)
   
   val cache = new ConcurrentHashMap[String, (Long, Long, Array[Byte])]()
@@ -130,7 +128,7 @@ class FileService extends SimpleFilter[RemoteNettyHttpRequest, Response] {
 
   def apply(request: RemoteNettyHttpRequest, service: Service[RemoteNettyHttpRequest, Response]): Future[Response] = {
     val uri = URLDecoder.decode(request.request.uri(), "UTF-8")
-    val f = if (uri != "/" && uri.length() > 0 ) {
+    val f = if (uri != "/" && uri.nonEmpty ) {
       val filesFolderPath = getServerProperty("static_files_folder").getOrElse("resources/public")
       val q_ind = uri.indexOf("?")
       val path = if (q_ind > -1)

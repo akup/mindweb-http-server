@@ -1,6 +1,6 @@
-package com.nn.mindweb.server.netty
+package com.nn.mindweb.server
+package netty
 
-import com.nn.mindweb.server.{ServerContext, Service}
 import com.nn.mindweb.server.messages.Response
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.nio.NioEventLoopGroup
@@ -53,40 +53,4 @@ class NettyServer {
         e.printStackTrace()
     }
   }
-
-
-  /*
-  private class SocketProcessor(s: Socket) extends Runnable {
-    private val is = s.getInputStream()
-    private val os = s.getOutputStream()
-
-    override def run() {
-      val fut_out = service.map(_.apply(is)).getOrElse{
-        val response = Response()
-        response.status = Status.Ok
-        response.headerMap += "Content-Type" -> "text/html"
-        response.headerMap += "Content-Length" -> "0"
-        Future{response}
-      }
-
-      try {
-        val resp = Await.result(fut_out, Timeout(5 seconds).duration)
-        os.write(resp.httpByteResponse)
-      } catch {
-        case e: java.util.concurrent.TimeoutException =>
-        case e: Throwable => {
-          e.printStackTrace()
-          val response = Response()
-          //TODO: bad status
-          response.status = Status.Ok
-          response.headerMap += "Content-Type" -> "text/html"
-          response.headerMap += "Content-Length" -> "0"
-          os.write(response.httpByteResponse)
-        }
-      }
-      os.flush()
-      is.close()
-    }
-  }
-   */
 }

@@ -3,20 +3,16 @@ package ajaxsite
 
 import java.io._
 import java.util.concurrent.Executors
-
 import com.aklabs.login.EdgeUser
 import com.github.mustachejava.codes.DefaultMustache
 import com.github.mustachejava.{Mustache, MustacheException, MustacheNotFoundException}
-import com.nn.http._
-import com.nn.mindweb.server.dataadapter.{AngularRequestServerStructure, StructuredFormDataAdapter}
-import com.nn.mindweb.server.dbgrpc.DbClient
-import com.nn.regbox.must.LocViewFactory.default_language
-import com.nn.regbox.must.{LocViewFactory, MindwebMustacheFactoryTrait, MustacheLoc, View}
 import com.twitter.mustache.ScalaObjectHandler
 import net.aklabs.db.dbapi.{DBNodeRequest, DBOperationStatus}
 import net.aklabs.helpers.Helpers
 import net.aklabs.helpers.JsonHelpers._
 import net.aklabs.modest.Modest
+import net.aklabs.http.{HttpRequest, MapParamMap, R, RenderVersion, RoundTripInfo}
+import net.aklabs.regbox.must.{LocViewFactory, MindwebMustacheFactoryTrait, MustacheLoc, View}
 import org.apache.commons.io.IOUtils
 import org.pmw.tinylog.Logger
 
@@ -25,6 +21,10 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
+import LocViewFactory.default_language
+
+import dataadapter._
+import com.nn.mindweb.server.dbgrpc.DbClient
 
 class DataNotFoundException(msg: String) extends Exception(msg)
 class SitemapMFactoryByReq(sitemap: SiteMap) {
@@ -473,7 +473,7 @@ class AjaxMapController(val rootPath: String, mustacheFactory: SitemapMFactoryBy
                     //Logger.debug("data: " + data)
                     //Logger.debug("json: " + json)
 
-                    val mw_page: String = R.renderVersion
+                    val mw_page: String = renderVersion
                     val load_default_scripts: String = R.defaultScripts
                     val load_angular_platform: String = R.angularPlatformScripts
                     val enable_ajax: String = """<script>window.addEventListener('DOMContentLoaded', function() {%s})</script>""".format(R.ajaxScript())
@@ -483,9 +483,12 @@ class AjaxMapController(val rootPath: String, mustacheFactory: SitemapMFactoryBy
                     } else {
                       """<script>window.addEventListener('DOMContentLoaded', function() {%s})</script>""".format(
                         rtInfos.map(i => {
-                          """var _rtTemp_aj_nav = %s; window.insertRoundtrips(_rtTemp_aj_nav, '%s');""".format(
-                            R.session.get.buildRoundtrip(i._2), i._1.replaceAll("'", "\'")
-                          )
+                          """var _rtTemp_aj_nav = %s; window.insertRoundtrips(_rtTemp_aj_nav, '%s');""".format({
+                            Logger.debug("Check render version at roundtrip")
+                            Logger.debug(R.renderVersion)
+                            Logger.debug(renderVersion)
+                            R.session.get.buildRoundtrip(i._2)
+                          }, i._1.replaceAll("'", "\'"))
                         }).mkString("\n")
                       )
                     }
@@ -550,15 +553,18 @@ class AjaxMapController(val rootPath: String, mustacheFactory: SitemapMFactoryBy
                     Logger.debug("data: " + data)
                     Logger.debug("json: " + json)
 
-                    val mw_page: String = R.renderVersion
+                    val mw_page: String = renderVersion
                     val roundtrip_script: String = if (rtInfos.isEmpty) {
                       ""
                     } else {
                       """<script>%s</script>""".format(
                         rtInfos.map(i => {
-                          """var _rtTemp_aj_nav = %s; window.insertRoundtrips(_rtTemp_aj_nav, '%s');""".format(
-                            R.session.get.buildRoundtrip(i._2), i._1.replaceAll("'", "\'")
-                          )
+                          """var _rtTemp_aj_nav = %s; window.insertRoundtrips(_rtTemp_aj_nav, '%s');""".format({
+                            Logger.debug("Check render version at roundtrip")
+                            Logger.debug(R.renderVersion)
+                            Logger.debug(renderVersion)
+                            R.session.get.buildRoundtrip(i._2)
+                          }, i._1.replaceAll("'", "\'"))
                         }).mkString("\n")
                       )
                     }
@@ -655,6 +661,9 @@ class AjaxMapController(val rootPath: String, mustacheFactory: SitemapMFactoryBy
                     })
                     //Jckson.mapToJson(LocViewFactory.localizeJson(data.flatMap(_.data_js.toSeq).toMap, lng))
                   }, rtInfos.map(i => {
+                    Logger.debug("Check render version at roundtrip")
+                    Logger.debug(R.renderVersion)
+                    Logger.debug(renderVersion)
                     i._1 -> R.session.get.buildRoundtrip(i._2)
                   }), //roundtrips
                     localizationNames.filter(!hasLocalizations.contains(_)).flatMap(loc_res => { //localizations

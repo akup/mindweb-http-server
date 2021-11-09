@@ -1,14 +1,12 @@
 package com.nn.mindweb.server
 
 import java.net.{InetSocketAddress, URLDecoder}
-
 import akka.util.Timeout
 import com.aklabs.login._
 import com.aklabs.login.grpc.LoginClient
 import com.aklabs.user.{AbstractEdgeUser, EntityUserId}
 import com.google.common.base.Splitter
-import com.nn.http._
-import com.nn.mindweb.server.messages.{CookieMessage, HeaderMap, MapHeaderMap}
+import com.nn.mindweb.server.messages._
 import com.nn.mindweb.server.netty.RemoteNettyHttpRequest
 import com.nn.mindweb.server.sessiongrpc.SessionClient
 import io.netty.handler.codec.DecoderResult
@@ -16,6 +14,7 @@ import io.netty.handler.codec.http.{DefaultHttpRequest, HttpHeaders, HttpMethod,
 import net.aklabs.helpers.JsonHelpers.{JObject, Jckson}
 import net.aklabs.helpers.TimeHelpers._
 import net.aklabs.helpers.{Helpers, _}
+import net.aklabs.http.{HttpRequest, HttpSession, MapParamMap, R, SessionInfo, StatelessSession, StreamFileParamHolder, TheSession}
 import org.pmw.tinylog.Logger
 
 import scala.collection.JavaConverters._
@@ -466,11 +465,7 @@ object SessionMaster {
     theSession.initDone()
   }
 
-
-  /**
-   * End comet long polling for all sessions. This allows a clean reload of Nginx
-   * because Nginx children stick around for long polling.
-   */
+  /*
   def breakOutAllComet(): Unit = {
     Logger.debug("breakOutAllComet: " +
       rwl.getReadHoldCount + " : " +
@@ -485,6 +480,7 @@ object SessionMaster {
     rwl.writeLock.unlock()
     Logger.debug("out a lock")
   }
+   */
 
   /**
    * Put an Actor in this list and the Actor will receive a message

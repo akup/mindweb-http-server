@@ -1,11 +1,9 @@
 package com.nn.mindweb.server.messages
 
 import java.util.concurrent.TimeUnit
-
 import java.text.ParseException
-
-import com.nn.regbox.utils.StringUtils
 import net.aklabs.helpers.CookieDecoder
+import net.aklabs.utils.StringUtils
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -34,30 +32,30 @@ class Cookie(var _name: String, var _value: String) {
   def isDiscard: Boolean = _isDiscard
   def isSecure: Boolean  = _isSecure
 
-  def comment_=(comment: String)       { _comment = comment }
-  def commentUrl_=(commentUrl: String) { _commentUrl = commentUrl }
-  def domain_=(domain: String)         { _domain = domain }
-  def maxAge_=(maxAge: Duration)       { _maxAge = maxAge }
-  def path_=(path: String)             { _path = path }
-  def ports_=(ports: Seq[Int])         { _ports = ports.toSet }
-  def value_=(value: String)           { _value = value }
-  def version_=(version: Int)          { _version = version }
-  def httpOnly_=(httpOnly: Boolean)    { _httpOnly = httpOnly }
-  def isDiscard_=(discard: Boolean)    { _isDiscard = discard }
-  def isSecure_=(secure: Boolean)      { _isSecure = secure }
+  def comment_=(comment: String): Unit = { _comment = comment }
+  def commentUrl_=(commentUrl: String): Unit = { _commentUrl = commentUrl }
+  def domain_=(domain: String): Unit = { _domain = domain }
+  def maxAge_=(maxAge: Duration): Unit = { _maxAge = maxAge }
+  def path_=(path: String): Unit = { _path = path }
+  def ports_=(ports: Seq[Int]): Unit = { _ports = ports.toSet }
+  def value_=(value: String): Unit = { _value = value }
+  def version_=(version: Int): Unit = { _version = version }
+  def httpOnly_=(httpOnly: Boolean): Unit = { _httpOnly = httpOnly }
+  def isDiscard_=(discard: Boolean): Unit = { _isDiscard = discard }
+  def isSecure_=(secure: Boolean): Unit = { _isSecure = secure }
 }
 
 object Cookie {
-  private val COMMA = ',';
+  private val COMMA = ','
   
   def decode(header: String): Set[Cookie] = {
     //val names = new ArrayBuffer()
     //val values = new ArrayBuffer()
     val kv = CookieDecoder.extractKeyValuePairs(header)
-    val names = kv.getKey()
-    val values = kv.getValue()
+    val names = kv.getKey
+    val values = kv.getValue
 
-    if (names.isEmpty()) return Set.empty[Cookie]
+    if (names.isEmpty) return Set.empty[Cookie]
 
     var i = 0
     var version = 0
@@ -66,11 +64,11 @@ object Cookie {
     // cookie name-value pair.
     if (names.get(0).equalsIgnoreCase(CookieHeaderNames.VERSION)) {
         try {
-            version = Integer.parseInt(values.get(0));
+            version = Integer.parseInt(values.get(0))
         } catch {
-          case e: NumberFormatException => // Ignore.
+          case _: NumberFormatException => // Ignore.
         }
-        i = 1;
+        i = 1
     }
 
     if (names.size() <= i) return Set.empty[Cookie]
@@ -95,8 +93,8 @@ object Cookie {
 
       var j = i + 1
       while (j < names.size()) {
-        name = names.get(j);
-        value = values.get(j);
+        name = names.get(j)
+        value = values.get(j)
         if (CookieHeaderNames.DISCARD.equalsIgnoreCase(name)) {
           discard = true
         } else if (CookieHeaderNames.SECURE.equalsIgnoreCase(name)) {
@@ -113,11 +111,11 @@ object Cookie {
           path = value
         } else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
           try {
-            val maxAgeMillis = HttpHeaderDateFormat.get().parse(value).getTime() - System.currentTimeMillis()
+            val maxAgeMillis = HttpHeaderDateFormat.get().parse(value).getTime - System.currentTimeMillis()
 
             maxAge = (maxAgeMillis / 1000) + {if (maxAgeMillis % 1000 != 0) 1 else 0}
           } catch {
-            case e: ParseException => // Ignore.
+            case _: ParseException => // Ignore.
           }
         } else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
           maxAge = Integer.parseInt(value)
@@ -129,7 +127,7 @@ object Cookie {
             try {
               ports :+= Integer.valueOf(s1).intValue()
             } catch {
-              case e: NumberFormatException =>  // Ignore.
+              case _: NumberFormatException =>  // Ignore.
             }
           })
         } else {
@@ -163,7 +161,7 @@ object Cookie {
       i += 1
     }
 
-    return cookies
+    cookies
   }
 }
 

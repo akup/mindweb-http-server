@@ -1,15 +1,9 @@
 package com.nn.mindweb.server.messages
 
-import java.nio.charset.Charset
-import java.util.Date
-import java.util.TimeZone
-import java.util.{Iterator => JIterator}
-
 import io.netty.handler.codec.http.{DefaultHttpHeaders, HttpHeaders, HttpMessage, HttpVersion}
-import net.aklabs.helpers.RichDateFormat
 
+import java.util.{Iterator => JIterator}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 trait CookieMessage extends HttpMessage {
 /*
@@ -34,6 +28,7 @@ trait CookieMessage extends HttpMessage {
   //def content_=(content: ChannelBuffer) { setContent(content) }
 
   var http_version: HttpVersion
+  @deprecated
   override def getProtocolVersion: HttpVersion = http_version
   override def protocolVersion: HttpVersion = http_version
   override def setProtocolVersion(version: HttpVersion): HttpMessage = {
@@ -57,12 +52,12 @@ trait CookieMessage extends HttpMessage {
   def getCookies: JIterator[Cookie] = cookies.valuesIterator.asJava
 
   /** Add a cookie */
-  def addCookie(cookie: Cookie) {
+  def addCookie(cookie: Cookie): Unit = {
     cookies += cookie
   }
 
   /** Remove a cookie */
-  def removeCookie(name: String) {
+  def removeCookie(name: String): Unit = {
     cookies -= name
   }
 }

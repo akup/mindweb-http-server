@@ -1,9 +1,9 @@
 package com.nn.mindweb.server.messages
 
-import java.io.RandomAccessFile
-
 import io.netty.handler.codec.DecoderResult
-import io.netty.handler.codec.http.{HttpMessage, HttpResponse, HttpResponseStatus, HttpVersion}
+import io.netty.handler.codec.http.{HttpResponse, HttpResponseStatus, HttpVersion}
+
+import java.io.RandomAccessFile
 
 abstract class Response extends CookieMessage with HttpResponse {
   override def isRequest = false
@@ -18,6 +18,7 @@ abstract class Response extends CookieMessage with HttpResponse {
     _status = HttpResponseStatus.valueOf(value)
   }
 
+  @deprecated
   override def getStatus: HttpResponseStatus = _status
   override def status: HttpResponseStatus = _status
   override def setStatus(status: HttpResponseStatus): HttpResponse = {
@@ -34,6 +35,7 @@ abstract class Response extends CookieMessage with HttpResponse {
 
   private val _decoderResult = DecoderResult.SUCCESS
   override def decoderResult: DecoderResult = _decoderResult
+  @deprecated
   override def getDecoderResult: DecoderResult = _decoderResult
   override def setDecoderResult(decoderResult: DecoderResult): Unit = {}
 
@@ -50,7 +52,7 @@ abstract class Response extends CookieMessage with HttpResponse {
 
   private var chunked = false
   def setChunked(chunked: Boolean): Unit = this.chunked = chunked
-  def isChunked(): Boolean = chunked
+  def isChunked: Boolean = chunked
 
   /*
   def httpHead: String = {
@@ -96,7 +98,7 @@ object Response {
 
   def apply(version: HttpVersion, status: HttpResponseStatus): Response =
     new Response {
-      var http_version = version
+      var http_version: HttpVersion = version
       private var http_status = status
     }
 

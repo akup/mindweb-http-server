@@ -1,18 +1,18 @@
-package com.nn.mindweb.server.sessiongrpc
+package com.nn.mindweb.server
+package sessiongrpc
 
 import java.util.concurrent.ConcurrentHashMap
-
 import com.aklabs.sessions.session._
-import com.nn.http.{CometUpdateJValStr, TheSession}
-import com.nn.mindweb.server.dataadapter.StructuredFormDataAdapter
-import com.nn.mindweb.server.{ServerContext, SessionMaster}
 import io.grpc.{Server, ServerBuilder}
 import net.aklabs.helpers.JsonHelpers.{JValue, Jckson}
+import net.aklabs.http.{CometUpdateJValStr, TheSession}
 import org.pmw.tinylog.Logger
 
 import scala.collection.JavaConverters._
 import scala.collection.concurrent
 import scala.concurrent.{ExecutionContext, Future}
+
+import dataadapter._
 
 object NotificationsServer {
   var server: NotificationsServer = _

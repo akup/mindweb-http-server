@@ -1,19 +1,17 @@
-package com.nn.mindweb.server.sessiongrpc
+package com.nn.mindweb.server
+package sessiongrpc
 
 import java.net.{InetSocketAddress, URI}
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import java.{lang, util}
-
-import akka.dispatch.MessageDispatcher
 import com.aklabs.login.EdgeUser
 import com.aklabs.sessions.session.{Empty, KeyValue, KeyedJson, PersistSt, PersistStatus, SessionData, SessionId, SessionIdWithRequest, SessionInfo, SessionsGrpc, UserData, UserDataResponse, UserRequest, UserSessionInfo, UserSessionInfoWithData, UserStoredData}
 import com.aklabs.user.AbstractEdgeUser
-import com.nn.http.{HttpRequest, R}
-import com.nn.mindweb.server.ServerContext
 import io.grpc.NameResolver.ResolutionResult
 import io.grpc.{Attributes, EquivalentAddressGroup, ManagedChannel, ManagedChannelBuilder, NameResolver}
 import net.aklabs.Props
 import net.aklabs.helpers.JsonHelpers.JObject
+import net.aklabs.http.{HttpRequest, R}
 import org.pmw.tinylog.Logger
 
 import scala.collection.JavaConverters._
@@ -84,7 +82,7 @@ object SessionClient {
     f
   }
   def keepAliveSession(sessionId: String): Future[Empty] = {
-    asyncStub.alive(SessionId(sessionId)).map(alive => {
+    asyncStub.alive(SessionId(sessionId)).map(_ => {
       Empty()
     })(com.nn.mindweb.server.ServerContext.grpc_dispatcher)
   }
@@ -160,7 +158,7 @@ object SessionClient {
                 case Some(edgeUser) =>
                   Logger.debug("Восстанавливаем пользователя, есть пользователь")
                   setUser(sessionId, _ip.get, _userAgent.get, edgeUser.asInstanceOf[EdgeUser], Nil).flatMap(_ => {
-                    val globalAttrs = session.getGlobalAttributes()
+                    val globalAttrs = session.getGlobalAttributes
                     val sessionDataSetDone = if (globalAttrs.nonEmpty) setSessionData(sessionId, _ip.get, _userAgent.get, globalAttrs)
                     else Future{Empty}
 
@@ -181,7 +179,7 @@ object SessionClient {
                   })
                 case _ =>
                   Logger.debug("Восстанавливаем пользователя, нет пользователя")
-                  val globalAttrs = session.getGlobalAttributes()
+                  val globalAttrs = session.getGlobalAttributes
                   if (globalAttrs.nonEmpty)
                     setSessionData(sessionId, _ip.get, _userAgent.get, globalAttrs)
                   Future{ps}
@@ -222,7 +220,7 @@ object SessionClient {
                 case Some(edgeUser) =>
                   Logger.debug("Восстанавливаем пользователя, есть пользователь")
                   setUser(sessionId, _ip.get, _userAgent.get, edgeUser.asInstanceOf[EdgeUser], Nil).flatMap(_ => {
-                    val globalAttrs = session.getGlobalAttributes()
+                    val globalAttrs = session.getGlobalAttributes
                     val sessionDataSetDone = if (globalAttrs.nonEmpty) setSessionData(sessionId, _ip.get, _userAgent.get, globalAttrs)
                     else Future{Empty}
 
@@ -243,7 +241,7 @@ object SessionClient {
                   })
                 case _ =>
                   Logger.debug("Восстанавливаем пользователя, нет пользователя")
-                  val globalAttrs = session.getGlobalAttributes()
+                  val globalAttrs = session.getGlobalAttributes
                   if (globalAttrs.nonEmpty)
                     setSessionData(sessionId, _ip.get, _userAgent.get, globalAttrs)
                   Future{udr}

@@ -2,16 +2,14 @@ package com.nn.mindweb.server.dataadapter
 
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.nn.http.vars.RequestVar
-import com.nn.http.{RenderVersion, RoundTripHandlerFunc}
-import com.nn.mindweb.server.dataadapter.StructuredFormDataAdapter.varExtractRegexp
 import com.nn.mindweb.server.dbgrpc.DbClient
 import net.aklabs.db.dbapi.{MergeGroupedRule, SaveEl, SaveStatus, UserId}
 import net.aklabs.helpers.JsonHelpers.{JNull, _}
 import net.aklabs.helpers._
+import net.aklabs.http.{RenderVersion, RoundTripHandlerFunc}
+import net.aklabs.http.vars.RequestVar
 import org.pmw.tinylog.Logger
 
 import scala.collection.{concurrent, mutable}
@@ -111,7 +109,7 @@ object StructuredFormDataAdapter {
 
 
   protected object AngularCleanerHelper extends RequestVar[CleanerHelper](CleanerHelper()) {
-    override lazy val __nameSalt: String = Helpers.nextFuncName
+    override lazy val _nameSalt: String = Helpers.nextFuncName
   }
 
   private case class RefStructure(single: Boolean, possibleLinks: JObject, available_p: String,

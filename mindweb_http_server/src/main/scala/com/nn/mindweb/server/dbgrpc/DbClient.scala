@@ -1,12 +1,11 @@
-package com.nn.mindweb.server.dbgrpc
+package com.nn.mindweb.server
+package dbgrpc
 
 import java.net.{InetSocketAddress, URI}
 import java.util
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import com.aklabs.login.EdgeUser
-import com.nn.mindweb.server.MindwebServer
 import io.grpc.NameResolver.ResolutionResult
 import io.grpc.{Attributes, EquivalentAddressGroup, ManagedChannel, ManagedChannelBuilder, NameResolver}
 import net.aklabs.Props

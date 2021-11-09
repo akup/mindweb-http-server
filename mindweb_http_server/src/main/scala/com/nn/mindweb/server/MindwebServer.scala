@@ -1,27 +1,24 @@
 package com.nn.mindweb.server
 
-import java.io.{File, InputStream}
-import java.util.Properties
-
 import akka.actor.ActorSystem
 import akka.dispatch.MessageDispatcher
-import akka.util.Timeout
-import com.nn.http.{CometContext, HttpRequest}
 import com.nn.mindweb.server.ServerContext._
-import com.nn.mindweb.server.ajaxsite.{AjaxMapController, SiteMap}
-import com.nn.mindweb.server.async.CometAndAjaxController
-import com.nn.mindweb.server.messages.Response
-import com.nn.mindweb.server.netty.{NettyServer, RemoteNettyHttpRequest}
-import com.nn.mindweb.server.sessiongrpc.NotificationsServer
-import com.nn.regbox._
+import com.nn.mindweb.server.ajaxsite._
+import com.nn.mindweb.server.frontasync._
+import com.nn.mindweb.server.messages._
+import com.nn.mindweb.server.netty._
+import com.nn.mindweb.server.sessiongrpc._
 import net.aklabs.DefaultSystemContext
 import net.aklabs.helpers.Helpers
-import net.aklabs.helpers.JsonHelpers.{JArray, Jckson}
-import net.aklabs.helpers.TimeHelpers._
+import net.aklabs.http.CometContext
+import net.aklabs.mindweb.server.ClosableWrapper
+import net.aklabs.regbox.{BootstrapDI, Bootstrapper, PostWriter}
 import org.pmw.tinylog.{Configurator, Logger}
 
+import java.io.{File, InputStream}
+import java.util.Properties
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.language.postfixOps
 
 object ServerContext {
@@ -77,7 +74,7 @@ object MindwebServer {
 	var filters: Seq[Filter[RemoteNettyHttpRequest, Response, RemoteNettyHttpRequest, Response]] = Seq.empty
 	private var controllers: Stream[Controller] = Stream(new CometAndAjaxController)//new CdApp()
 
-	def addFilter(filter: Filter[RemoteNettyHttpRequest, Response, RemoteNettyHttpRequest, Response]) {
+	def addFilter(filter: Filter[RemoteNettyHttpRequest, Response, RemoteNettyHttpRequest, Response]): Unit = {
 		filters = filters ++ Seq(filter)
 	}
 
@@ -89,6 +86,12 @@ object MindwebServer {
 	private[this] lazy val service = {
 		val appService = new Service[RemoteNettyHttpRequest, Response] {
 			def apply(rawRequest: RemoteNettyHttpRequest): Future[Response] = {
+				attemptRequest(rawRequest).recover {
+					case t: Throwable =>
+						//Await.result(errorHandler(rawRequest, t), Timeout(5 seconds).duration)
+						errorHandler(rawRequest, t)
+				}
+				/*
 				try {
 					Logger.debug("run service")
 					attemptRequest(rawRequest).recover {
@@ -100,6 +103,7 @@ object MindwebServer {
 						Logger.error(e)
 						errorHandler(rawRequest, e)
 				}
+				 */
 			}
 		}
 
@@ -122,12 +126,11 @@ object MindwebServer {
 	  rbf.map(_.build(request))
 	}
 
-	def errorHandler(request:RemoteNettyHttpRequest, e:Throwable):Future[Response]= {
-		Logger.debug("error handler")
+	def errorHandler(request:RemoteNettyHttpRequest, e:Throwable): Response = {
 		e.printStackTrace()
 	  val rb = new ResponseBuilder
-	  val rbf =rb.status(500).plain("Exception:"+e.getMessage).toFuture
-	  rbf.map(_.build(request))
+	  rb.status(500).plain("Exception:"+e.getMessage).build(request)
+	  //rbf.map(_.build(request))
 	}
 
 

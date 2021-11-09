@@ -17,17 +17,17 @@ package com.nn.mindweb.server
 
 import java.text.SimpleDateFormat
 import java.util.Date
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.nn.mindweb.server.ServerContext._
-import com.nn.mindweb.server.messages.{Cookie, Response}
-import com.nn.mindweb.server.netty.RemoteNettyHttpRequest
-import com.nn.regbox.must.View
 import io.netty.handler.codec.http.{HttpResponseStatus, HttpVersion}
+import net.aklabs.regbox.must.View
 import org.pmw.tinylog.Logger
 
 import scala.concurrent.Future
+
+import messages._
+import netty._
+import ServerContext._
 
 object ResponseBuilder {
 	def apply(body: String): Response =
@@ -40,10 +40,10 @@ object ResponseBuilder {
 		new ResponseBuilder().body(body).status(status).headers(headers).build
 		
 	lazy val formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz")
-	lazy val lastModDate = formatter.format(new Date())
-	lazy val expire = {
+	lazy val lastModDate: String = formatter.format(new Date())
+	lazy val expire: Date = {
 	    val dt = new Date()
-	    dt.setYear(dt.getYear()+1)
+	    dt.setYear(dt.getYear+1)
 	    dt
     }
 	lazy val expireDate = formatter.format(expire)

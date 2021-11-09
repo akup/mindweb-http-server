@@ -1,10 +1,10 @@
-package com.nn.mindweb.server.netty
+package com.nn.mindweb.server
+package netty
+
+import com.nn.mindweb.server.messages.Response
 
 import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
-import com.nn.mindweb.server.ServerContext._
-import com.nn.mindweb.server.messages.Response
-import com.nn.mindweb.server.{MindwebServer, Service}
 import io.netty.buffer.Unpooled
 import io.netty.channel.{ChannelDuplexHandler, ChannelFutureListener, ChannelHandlerContext}
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException
@@ -91,7 +91,7 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
         attrsToRelease.clear()
 
         response.headers().add("Server", "MindWeb Edge/2021-02-02")
-        if (!response.isChunked()) {
+        if (!response.isChunked) {
           response.headers().add("Connection", "close")
           ctx.write(response)
           ctx.writeAndFlush(Unpooled.copiedBuffer(response.content))
@@ -112,7 +112,7 @@ class HttpServerHandler(service: Service[RemoteNettyHttpRequest, Response]) exte
           }
         }
       case _ =>
-    }
+    }(ServerContext.flow_dispatcher)
   }
 
   private def channelReadObject(ctx: ChannelHandlerContext, httpObj: HttpObject): Unit = {

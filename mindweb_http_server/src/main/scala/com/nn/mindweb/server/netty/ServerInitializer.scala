@@ -1,14 +1,15 @@
-package com.nn.mindweb.server.netty
+package com.nn.mindweb.server
+package netty
 
-import com.nn.mindweb.server.Service
-import com.nn.mindweb.server.messages.Response
+import messages._
+
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.socket.SocketChannel
-import io.netty.handler.codec.http.{HttpContentCompressor, HttpRequestDecoder, HttpResponseEncoder}
+import io.netty.handler.codec.http.{HttpRequestDecoder, HttpResponseEncoder}
 import io.netty.handler.stream.ChunkedWriteHandler
 
 class ServerInitializer(service: Service[RemoteNettyHttpRequest, Response]) extends ChannelInitializer[SocketChannel] {
-  override def initChannel(ch: SocketChannel) {
+  override def initChannel(ch: SocketChannel): Unit = {
     // Create a default pipeline implementation.
     val pipeline = ch.pipeline()
 

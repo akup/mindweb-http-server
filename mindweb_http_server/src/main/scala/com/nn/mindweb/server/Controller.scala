@@ -2,21 +2,21 @@ package com.nn.mindweb.server
 
 import com.aklabs.login._
 import com.fasterxml.jackson.databind.JsonNode
-import com.nn.http.{ContinueResponseException, MapParamMap, R, RoundTripInfo, StreamFileParamHolder, TheSession, HttpRequest => SessRequest}
-import com.nn.mindweb.server.messages.Response
-import com.nn.mindweb.server.netty.RemoteNettyHttpRequest
 import io.netty.handler.codec.http.HttpMethod
 import net.aklabs.helpers.JsonHelpers._
+import net.aklabs.http.{ContinueResponseException, HttpRequest, MapParamMap, R, RoundTripInfo, StreamFileParamHolder, TheSession}
 
 import scala.collection.JavaConverters._
 import org.pmw.tinylog.Logger
 
-import scala.collection.immutable
 import scala.collection.immutable.{Map, Vector}
 import scala.concurrent.Future
 
+import messages._
+import netty._
 
-case class DataResponse(path: String,
+
+case class DataResponse(path: String, //TODO: make implicit from request
 												template_js: Map[String, _] = Map.empty,
 												data_js: Map[String, _] = Map.empty,
 												language: Option[String] = R.httpSession.flatMap(_.attribute("locale").map(_.toString)),
@@ -91,12 +91,10 @@ class Controller {
 		render.plain(msg).status(code).header("Location", location)
 	}
 
-	private def doSuperSession(r: SessRequest, s: TheSession, continue: Option[() => Nothing], f: () => Future[Response]): Future[Response] = {
+	private def doSuperSession(r: HttpRequest, s: TheSession, continue: Option[() => Nothing], f: () => Future[Response]): Future[Response] = {
     try {
-			Logger.debug("R.init")
       R.init(r, s) {
 
-        //ControlHelpers.tryo {
         try {
         	TheSession.onBeginServicing.foreach(_(s, r))
         } catch {
@@ -114,7 +112,7 @@ class Controller {
 						!EdgeUser.loggedIn_?) {
 					EdgeUser.loginByCookies()
 
-					//TODO: restore user by session
+					//TODO: restore comets by session
         }
 
         //makeCometBreakoutDecision(s, r)
