@@ -146,7 +146,7 @@ object JsonHelpers {
   implicit def d2JValue(d: Double): JValue = JDouble(d)
   implicit def bd2JValue(i: BigDecimal): JValue = JDouble(i)
   implicit def b2JValue(i: Boolean): JValue = JBool(i)
-  implicit def b2JValue[A](s: Seq[A])(implicit c: A => JValue): JArray = JArray(s.map(c))
+  implicit def seq2JValue[A](s: Seq[A])(implicit c: A => JValue): JArray = JArray(s.map(c))
   implicit def a2JValue[A](s: Array[A])(implicit c: A => JValue): JArray = JArray(s.map(c))
   implicit def m2JValue[A](m: Map[String, A])(implicit c: A => JValue): JObject =
     JObject(m.map(e => e._1 -> c(e._2)))
@@ -182,8 +182,10 @@ object JsonHelpers {
   implicit def rich2node(rich: RichJNode): JValue = rich.jv
   implicit def array2rich(array: JArray): RichJArray = new RichJArray(array)
   implicit def rich2array(rich: RichJArray): JArray = rich.array
+  /*
   implicit def fieldseq2object[JF](fields: Seq[JF])(implicit fn: JF => (String, JValue)): JObject =
     JObject(fields.map(fn))
+   */
   implicit def fieldmap2object[JV](fields: Map[String, JV])(implicit fn: JV => JValue): JObject =
     JObject(fields.map(kv => kv._1 -> fn(kv._2)))
 
